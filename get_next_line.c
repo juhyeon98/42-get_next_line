@@ -1,102 +1,90 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: juhyelee <juhyelee@student.42seoul.kr>     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/04/29 19:33:23 by juhyelee          #+#    #+#             */
+/*   Updated: 2023/05/02 16:33:55 by juhyelee         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "get_next_line.h"
 
-static int	is_not_contain_nl(const char *str);
-static char	*merge(char *s1, const char *s2);
-static char	*dup_str(const char *str, const char sp_char);
-static void	org_remain(char **remain);
+static int	is_full_buffer(t_buffer *buffer, const int fd);
+static char	*get_line(char *re, t_buffer *buffer, const int l_idx);
+static char	*return_line(char *re, int is_full);
 
 char	*get_next_line(int fd)
 {
-	static t_fd	*fds;
-	t_fd		*curr;
-	char		*ret;
-	char		buffer[BUFFER_SIZE + 1];
-	int			len;
+	static t_buffer	buffer;
+	char			*re;
+	int				i;
+	int				is_full;
 
-	curr = find_fd(fds, fd);
-	if (!curr)
-		curr = add_fd(&fds, fd);
-	if (!curr)
-		return (NULL);
-	while (is_not_contain_nl(curr->remain))
+	re = NULL;
+	i = 0;
+	is_full = 1;
+	if (buffer.len == 0)
+		is_full = is_full_buffer(&buffer, fd);
+	while (is_full == 1)
 	{
-		len = read(fd, buffer, BUFFER_SIZE);
-		if (len <= 0)
-			break ;
-		buffer[len] = '\0';
-		curr->remain = merge(curr->remain, buffer);
+		if (buffer.buffer[i] == '\n')
+			return (get_line(re, &buffer, i));
+		else if (i == buffer.len)
+		{
+			re = marge(re, buffer.buffer, i - 1);
+			buffer.len = 0;
+			is_full = is_full_buffer(&buffer, fd);
+			i = 0;
+		}
+		else
+			i++;
 	}
-	ret = dup_str(curr->remain, '\n');
-	org_remain(&(curr->remain));
-	remove_fd(&fds, curr);
-	return (ret);
+	return (return_line(re, is_full));
 }
 
-static int	is_not_contain_nl(const char *str)
+static int	is_full_buffer(t_buffer *buffer, const int fd)
 {
-	if (!str)
-		return (1);
-	while (*str)
+	buffer->len = read(fd, buffer->buffer, BUFFER_SIZE);
+	if (buffer->len > 0)
+		buffer->buffer[buffer->len] = '\0';
+	if (buffer->len < 0)
 	{
-		if (*str == '\n')
-			return (0);
-		str++;
+		buffer->buffer[0] = 0;
+		buffer->len = 0;
+		return (-1);
 	}
+	else if (buffer->len == 0)
+		return (0);
 	return (1);
 }
 
-static char	*merge(char *s1, const char *s2)
+static char	*get_line(char *re, t_buffer *buffer, const int l_idx)
 {
-	const size_t	s1_len = get_len(s1, '\0');
-	const size_t	s2_len = get_len(s2, '\0');
-	char	*ret;
+	char	*temp;
+	int		i;
 
-	if (!*s2)
-		return (NULL);
-	ret = (char *)malloc(sizeof(char) * (s1_len + s2_len + 1));
-	if (!ret)
-		return (NULL);
-	copy_str(ret, s1, s1_len + 1);
-	copy_str(ret + s1_len, s2, s2_len + 1);
-	if (s1)
-		free(s1);
-	s1 = NULL;
-	return (ret);
-}
-
-static char	*dup_str(const char *str, const char sp_char)
-{
-	const size_t	size = get_len(str, sp_char) + 1;
-	char			*ret;
-
-	if (!str)
-		return (NULL);
-	ret = (char *)malloc(sizeof(char) * size);
-	if (!ret)
-		return (NULL);
-	copy_str(ret, str, size);
-	return (ret);
-}
-
-static void	org_remain(char **remain)
-{
-	const size_t	nl_len = get_len(*remain, '\n');
-	const size_t	end_len = get_len(*remain, '\0');
-	const size_t	size = end_len - nl_len + 1;
-	char			*ret;
-
-	if (!*remain)
-		return ;
-	ret = (char *)malloc(sizeof(char) * size);
-	if (!ret)
-		return ;
-	copy_str(ret, *remain + nl_len, size);
-	free(*remain);
-	*remain = dup_str(ret + 1, '\0');
-	free(ret);
-	if (!(*remain)[0])
+	temp = marge(re, buffer->buffer, l_idx);
+	i = 0;
+	while (i + l_idx + 1 < buffer->len)
 	{
-		free(*remain);
-		*remain = NULL;
+		buffer->buffer[i] = buffer->buffer[i + l_idx + 1];
+		i++;
 	}
+	buffer->buffer[i] = '\0';
+	buffer->len = i;
+	return (temp);
+}
+
+static char	*return_line(char *re, int is_full)
+{
+	if (is_full == -1)
+	{
+		if (re != NULL)
+			free(re);
+		return (NULL);
+	}
+	return (re);
 }

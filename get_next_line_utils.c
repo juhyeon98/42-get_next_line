@@ -1,84 +1,78 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line_utils.c                              :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: juhyelee <juhyelee@student.42seoul.kr>     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/04/29 19:37:09 by juhyelee          #+#    #+#             */
+/*   Updated: 2023/05/02 16:32:31 by juhyelee         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "get_next_line.h"
 
-t_fd	*find_fd(const t_fd *list, const int fd)
+static char	*dup_str(const char *str, const int len);
+static char	*join_strs(const char *s1, const char *s2, const int s2_len);
+static void	copy_l(char *dst, const char *src, const int d_size);
+static int	get_len(const char *str);
+
+char	*marge(char *s1, const char *s2, const int s2_idx)
 {
-	t_fd	*curr;
+	char	*temp;
 
-	curr = (t_fd *)list;
-	while (curr)
-	{
-		if (curr->fd == fd)
-			break ;
-		curr = curr->next;
-	}
-	return (&curr);
-}
-
-t_fd	*add_fd(t_fd **list, const int fd)
-{
-	t_fd	*new_fd;
-
-	new_fd = (t_fd *)malloc(sizeof(t_fd));
-	if (!new_fd)
+	if (s2_idx < 0)
 		return (NULL);
-	new_fd->fd = fd;
-	new_fd->remain = NULL;
-	new_fd->next = NULL;
-	if (*list)
-	{
-		new_fd->next = *list;
-	}
-	*list = new_fd;
-	return (new_fd);
+	if (s1 == NULL)
+		return (dup_str(s2, s2_idx + 1));
+	temp = join_strs(s1, s2, s2_idx + 1);
+	free(s1);
+	return (temp);
 }
 
-void	remove_fd(t_fd **list, t_fd *node)
+static char	*dup_str(const char *str, const int len)
 {
-	t_fd	*prev;
+	char	*temp;
 
-	if (*list == node)
-	{
-		*list = (*list)->next;
-	}
-	else
-	{
-		prev = *list;
-		while (prev->next != node)
-			prev = prev->next;
-		prev->next = node->next;
-	}
-	if (node->remain)
-		free(node->remain);
-	free(node);
+	temp = (char *)malloc(sizeof(char) * (len + 1));
+	if (temp == NULL)
+		return (NULL);
+	copy_l(temp, str, len + 1);
+	return (temp);
 }
 
-void	copy_str(char *dst, const char *org, const size_t o_size)
+static char	*join_strs(const char *s1, const char *s2, const int s2_len)
 {
-	size_t	index;
+	const int	s1_len = get_len(s1);
+	char		*temp;
 
-	if (!org)
-		return ;
-	index = 0;
-	while (org[index] && index + 1 < o_size)
-	{
-		dst[index] = org[index];
-		index++;
-	}
-	dst[index] = '\0';
+	temp = (char *)malloc(sizeof(char) * (s1_len + s2_len + 1));
+	if (temp == NULL)
+		return (NULL);
+	copy_l(temp, s1, s1_len + 1);
+	copy_l(temp + s1_len, s2, s2_len + 1);
+	return (temp);
 }
 
-size_t	get_len(const char *str, const char sp_char)
+static void	copy_l(char *dst, const char *src, const int d_size)
 {
-	size_t	len;
+	int	i;
 
-	if (!str)
-		return (0);
+	i = 0;
+	while (i < d_size - 1 && src[i] != '\0')
+	{
+		dst[i] = src[i];
+		i++;
+	}
+	dst[i] = '\0';
+}
+
+static int	get_len(const char *str)
+{
+	int	len;
+
 	len = 0;
 	while (str[len])
-	{
-		if (str[len] == sp_char)
-			break ;
 		len++;
-	}
 	return (len);
 }
